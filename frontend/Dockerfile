@@ -1,19 +1,26 @@
-# Use an official Node.js runtime as a parent image
-FROM node:18
+# STAGE 1: Build the React App
+FROM node:18 as build-stage
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy package.json and package-lock.json to the working directory
+# Copy package.json and install dependencies
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# Copy the rest of the application's code
+# Copy the rest of the source code and build the app
 COPY . .
-
-# Build the React app
+# The CI=false is from your package.json, which is good.
 RUN npm run build
 
-CMD ["npm", "start"]
+# STAGE 2: Serve with NGINX
+FROM nginx:1.25-alpine
+
+# Copy the static files from the build stage
+COPY --from=build-stage /app/build /usr/share/nginx/html
+
+# We need to add an NGINX config file to handle routing and proxying
+# We will create this file next.
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80
+EXPOSE 80
