@@ -3,7 +3,7 @@ name: Deploy Huddle to EC2
 on:
   push:
     branches:
-      - main  # Or 'master', depending on your branch
+      - prod  # Or 'master', depending on your branch
 
 jobs:
   build-and-push:
