@@ -16,11 +16,10 @@ load_dotenv()
 app = Flask(__name__)
 
 # Production/Development environment detection
-IS_PRODUCTION = os.getenv('FLASK_ENV') == 'production' or os.getenv('RENDER') is not None
+IS_PRODUCTION = os.getenv('FLASK_ENV') == 'production'
 
 print(f"[DEBUG] IS_PRODUCTION: {IS_PRODUCTION}")
 print(f"[DEBUG] FLASK_ENV: {os.getenv('FLASK_ENV')}")
-print(f"[DEBUG] RENDER env var: {os.getenv('RENDER')}")
 
 # Configure CORS for production and development
 if IS_PRODUCTION:
