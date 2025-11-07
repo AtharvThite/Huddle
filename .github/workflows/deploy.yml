@@ -1,0 +1,82 @@
+name: Deploy Huddle to EC2
+
+on:
+  push:
+    branches:
+      - main  # Or 'master', depending on your branch
+
+jobs:
+  build-and-push:
+    name: Build and Push to ECR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push backend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: huddle-backend
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f backend/Dockerfile ./backend
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Build, tag, and push frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: huddle-frontend
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f frontend/Dockerfile ./frontend
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: build-and-push  # This job runs only after build-and-push succeeds
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          script: |
+            # Create a directory for the app
+            mkdir -p ~/huddle-app
+            cd ~/huddle-app
+
+            # Create the .env files from GitHub Secrets
+            echo "${{ secrets.ENV_FILE_BACKEND }}" > backend/.env
+            echo "${{ secrets.ENV_FILE_FRONTEND }}" > frontend/.env
+
+            # Create the docker-compose.prod.yml from the repo
+            # Note: You must update the 'image' URLs in this file first!
+            echo "${{ github.workspace }}/docker-compose.prod.yml" > docker-compose.prod.yml
+            
+            # Log in to ECR (needed on the EC2 instance)
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+            
+            # Pull the new images
+            docker-compose -f docker-compose.prod.yml pull
+            
+            # Stop and restart the services
+            # --no-build is important, as images are already built
+            docker-compose -f docker-compose.prod.yml up -d --no-build
