@@ -25,11 +25,8 @@ print(f"[DEBUG] RENDER env var: {os.getenv('RENDER')}")
 # Configure CORS for production and development
 if IS_PRODUCTION:
     allowed_origins = [
-        'https://huddle-gathersmarter.netlify.app',
-        'https://huddle-gathersmarter.netlify.app/',
-        'https://huddle-bugz.onrender.com',
-        'https://huddle-bugz.onrender.com/',
-        'http://13.233.158.115:3000'
+        'http://13.233.158.115:3000',
+        'http://13.233.158.115'
     ]
 else:
     allowed_origins = ['http://localhost:3000']
