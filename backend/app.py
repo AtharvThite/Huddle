@@ -8,10 +8,10 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from bson.objectid import ObjectId
 import os
-import uuid
 import traceback
 
 load_dotenv()
+CLIENT_ORIGIN = os.getenv('CLIENT_ORIGIN')
 
 app = Flask(__name__)
 
@@ -23,12 +23,16 @@ print(f"[DEBUG] FLASK_ENV: {os.getenv('FLASK_ENV')}")
 
 # Configure CORS for production and development
 if IS_PRODUCTION:
-    allowed_origins = [
-        'http://13.233.158.115:3000',
-        'http://13.233.158.115'
-    ]
+    # This list will ONLY contain your EC2 server URL
+    allowed_origins = [] 
+    if CLIENT_ORIGIN:
+        print(f"[DEBUG] Adding production origin: {CLIENT_ORIGIN}")
+        allowed_origins.append(CLIENT_ORIGIN)
+    else:
+        print("[DEBUG] WARNING: FLASK_ENV is production but no CLIENT_ORIGIN is set!")
 else:
-    allowed_origins = ['http://localhost:3000']
+    # This list only allows your local frontend
+    allowed_origins = ['http://localhost:3000'] 
 
 print(f"[DEBUG] Allowed origins: {allowed_origins}")
 
