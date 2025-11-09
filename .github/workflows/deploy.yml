@@ -34,13 +34,19 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f backend/Dockerfile ./backend
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
+      # --- THIS STEP IS NOW FIXED ---
       - name: Build, tag, and push frontend image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: huddle/frontend
           IMAGE_TAG: latest
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f frontend/Dockerfile ./frontend
+          docker build \
+            --build-arg REACT_APP_API_URL=${{ secrets.REACT_APP_API_URL }} \
+            --build-arg REACT_APP_SOCKET_URL=${{ secrets.REACT_APP_SOCKET_URL }} \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -f frontend/Dockerfile \
+            ./frontend
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
   deploy:
@@ -56,27 +62,24 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           script: |
-            # Navigate to the app directory
             mkdir -p ~/huddle-app
             cd ~/huddle-app
             
-            # Create the .env files from GitHub Secrets
-            # (This now correctly creates them in the root of ~/huddle-app)
+            # Create backend env file
             echo "${{ secrets.ENV_FILE_BACKEND }}" > .env.backend
-            echo "${{ secrets.ENV_FILE_FRONTEND }}" > .env.frontend
             
-            # Create the compose file from GitHub Secrets
-            # (This now correctly echoes the CONTENT of the secret)
+            # (The frontend env file is no longer needed here)
+            
+            # Create the compose file
             echo "${{ secrets.COMPOSE_FILE_PROD }}" > docker-compose.prod.yml
             
-            # Log in to ECR (using the EC2's IAM Role)
+            # Log in to ECR
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
             
-            # Pull the new images
+            # Pull (using hyphen)
             docker-compose -f docker-compose.prod.yml pull
             
-            # Restart the services
+            # Restart (using hyphen)
             docker-compose -f docker-compose.prod.yml up -d --no-build
             
-            # Clean up old images
             docker image prune -f
