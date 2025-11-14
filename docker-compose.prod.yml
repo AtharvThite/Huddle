@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    # Replace with your ECR image URI
+    image: 147997129477.dkr.ecr.ap-south-1.amazonaws.com/huddle/backend
+    restart: always
+    env_file:
+      - ./backend/.env  # This file will be created on the server by CI/CD
+    networks:
+      - huddle-network
+
+  frontend:
+    # Replace with your ECR image URI
+    image: 147997129477.dkr.ecr.ap-south-1.amazonaws.com/huddle/frontend
+    restart: always
+    ports:
+      - "80:80"     # Expose HTTP
+      - "443:443"   # Expose HTTPS (for later)
+    env_file:
+      - ./frontend/.env # This file will be created on the server by CI/CD
+    depends_on:
+      - backend
+    networks:
+      - huddle-network
+
+networks:
+  huddle-network:
+    driver: bridge

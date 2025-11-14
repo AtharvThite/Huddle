@@ -1,19 +1,27 @@
-# Use an official Node.js runtime as a parent image
-FROM node:18
+# STAGE 1: Build the React App
+FROM node:18 as build-stage
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy package.json and package-lock.json to the working directory
+# --- ADD THESE LINES ---
+# Accept build-time arguments
+ARG REACT_APP_API_URL
+ARG REACT_APP_SOCKET_URL
+
+# Set them as environment variables
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+ENV REACT_APP_SOCKET_URL=$REACT_APP_SOCKET_URL
+# --- END OF ADDED LINES ---
+
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
-
-# Copy the rest of the application's code
 COPY . .
 
-# Build the React app
+# This command will now use the ENV vars
 RUN npm run build
 
-CMD ["npm", "start"]
+# STAGE 2: Serve with NGINX
+FROM nginx:1.25-alpine
+COPY --from=build-stage /app/build /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80

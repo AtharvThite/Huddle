@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
   // Use environment variable or fallback to production URL
   const API_BASE = process.env.NODE_ENV === 'development' 
     ? 'http://localhost:5000/api' 
-    : (process.env.REACT_APP_API_URL || 'https://huddle-bugz.onrender.com/api');
+    : (process.env.REACT_APP_API_URL || 'https://13.233.158.115/api');
 
   useEffect(() => {
     if (token) {
