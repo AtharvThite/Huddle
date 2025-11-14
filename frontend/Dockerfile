@@ -3,7 +3,6 @@ FROM node:18 as build-stage
 
 WORKDIR /app
 
-# --- ADD THESE LINES ---
 # Accept build-time arguments
 ARG REACT_APP_API_URL
 ARG REACT_APP_SOCKET_URL
@@ -11,7 +10,6 @@ ARG REACT_APP_SOCKET_URL
 # Set them as environment variables
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
 ENV REACT_APP_SOCKET_URL=$REACT_APP_SOCKET_URL
-# --- END OF ADDED LINES ---
 
 COPY package*.json ./
 RUN npm install
