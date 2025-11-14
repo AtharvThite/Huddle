@@ -62,24 +62,29 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           script: |
+            # Navigate to the app directory
             mkdir -p ~/huddle-app
             cd ~/huddle-app
             
-            # Create backend env file
+            # Create the .env files from GitHub Secrets
             echo "${{ secrets.ENV_FILE_BACKEND }}" > .env.backend
             
-            # (The frontend env file is no longer needed here)
-            
-            # Create the compose file
+            # Create the compose file from GitHub Secrets
             echo "${{ secrets.COMPOSE_FILE_PROD }}" > docker-compose.prod.yml
             
-            # Log in to ECR
+            # Log in to ECR (using the EC2's IAM Role)
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
             
-            # Pull (using hyphen)
+            # Pull the new images
             docker-compose -f docker-compose.prod.yml pull
             
-            # Restart (using hyphen)
-            docker-compose -f docker-compose.prod.yml up -d --no-build
+            # --- THIS IS THE FIX ---
+            # Stop and remove the old containers first
+            docker-compose -f docker-compose.prod.yml down
             
+            # This will now create fresh containers
+            docker-compose -f docker-compose.prod.yml up -d --no-build
+            # --- END OF FIX ---
+            
+            # Clean up old images
             docker image prune -f
